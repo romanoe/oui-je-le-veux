@@ -269,7 +269,7 @@
                     <p>Le dimanche 26 septembre 2021, la Suisse a dit <strong>oui</strong> au mariage civil pour toutes
                         et tous.
                         Depuis juillet 2022, {nMariages} mariages de même sexe et {nConversions} conversions de
-                        partenariat enregistré ont eu lieu, mais dans quel canton y a-t-il eu le plus ?
+                        partenariat enregistré ont eu lieu, mais dans quel canton y en a-t-il eu le plus ?
 
                         <strong>Découvrons ensemble</strong> !</p>
                 </div>
