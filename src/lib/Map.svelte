@@ -2,17 +2,17 @@
     import {onMount} from "svelte";
     import {geoPath, geoTransform} from "d3-geo";
     import {select, selectAll} from "d3-selection";
-    import {draw, fade} from "svelte/transition";
-    import {zoom, zoomIdentity} from "d3-zoom";
+    import {fade} from "svelte/transition";
     import bbox from "@turf/bbox";
-    import {scaleLinear, scaleSequential} from "d3-scale";
-    import {extent, max} from "d3-array";
+    import {scaleLinear, scaleSequential, scaleBand} from "d3-scale";
+    import {max, sum} from "d3-array";
     import {interpolate} from "d3-interpolate";
-    import legend from "d3-color-legend";
     import {Grid, Column, Row} from "carbon-components-svelte";
+    import {axisBottom} from "d3-axis";
 
 
-    let geodata = [], projection, path, colorScaleMariage, colorScaleConversions;
+    let geodata = [], dataAgg = null, data_total = [], projection, path, colorScaleMariage, colorScaleConversions,
+        linearScale, nConversions, nMariages;
     let selected = 'total';
 
     function onChange(event) {
@@ -21,15 +21,9 @@
 
 
     // SVG properties
-    const margin = {top: 50, right: 50, bottom: 0, left: 50},
-        w = window.innerWidth / 1.5 - margin.left - margin.right,
-        h = window.innerHeight / 1.5 - margin.top - margin.bottom;
-
-
-    const doZoom = (e) => {
-        selectAll("path").attr("transform", e.transform);
-        selectAll("text").attr("transform", e.transform);
-    }
+    const margin = {top: 50, right: 20, bottom: 0, left: 20},
+        w = window.innerWidth * 0.6 - margin.left - margin.right,
+        h = window.innerHeight * 0.9 - margin.top - margin.bottom;
 
 
     // Tooltip
@@ -43,21 +37,6 @@
         let tooltip = document.getElementById(source_id);
         tooltip.style.display = "none";
     }
-
-    // Zoom
-    const mapZoom = zoom().scaleExtent([1, 5]).on('zoom', doZoom);
-
-
-    const initZoom = () => {
-        select('svg')
-            .call(mapZoom);
-    }
-
-
-    const zoomTo = (coordinates) => {
-        select("svg").transition().duration(4000).call(mapZoom.transform, zoomIdentity.translate(w / 2, h / 2).scale(5).translate(-projection(coordinates)[0], -projection(coordinates)[1]));
-    }
-
 
     // Mouse over : change color of path
     const colors = ["#fdf21f", "#3fdf4b", "#3462fe", "#fc0049", "#fe8f01"]
@@ -78,14 +57,49 @@
     }
 
 
-    // Fetch data and initialize zoom
+    const setColorScale = (data, property) => {
+
+        const maxProperty = max(data.map(d => d.properties[property] / d.properties.pop * 10000))
+
+        // Color scales and legend
+        return scaleSequential(interpolate("white", "#50c1a3")).domain([0, maxProperty])
+
+    }
+
+    $: colorScale = setColorScale(geodata, selected)
+
+
+    const setLegendAxis = (domain) => {
+
+        // Axis
+        select("#legend").append('g').attr("class", "axis").attr("transform", "translate(0,35)")
+
+        // linear scale for axis
+        const sequentialScale = scaleSequential()
+            .domain(domain)
+            .range([0, 300])
+            .nice()
+
+        // Construct axis
+        const axis = axisBottom(sequentialScale).tickSize([-20]);
+        select('.axis')
+            .call(axis);
+    }
+
+
+    $: axisLegend = setLegendAxis(colorScale.domain())
+
+
+    // Fetch and manipulate data
     onMount(async () => {
             const data = await fetch('./data/mariages_meme_sexe_2022_mn95.geojson').then((response) => response.json())
+            geodata = data.features
 
-            // Thanks SRF data
+
+            // Map MN95 data
+            // Thanks SRF data + Luc Guillemot
             // https://blog.az.sg/posts/mapping-switzerland-2/
             // https://bl.ocks.org/mbostock/6216797
-
             const [minX, minY, maxX, maxY] = bbox(data);
 
             const width = w - margin.left - margin.right;
@@ -94,21 +108,15 @@
 
             // Scales
             const x = scaleLinear()
-                .range([0, width / 1.2])
+                .range([0, width])
                 .domain([minX, maxX]);
 
             const y = scaleLinear()
-                .range([0, height / 1.2])
+                .range([0, height])
                 .domain([maxY, minY]);
 
-            const maxMariages = max(data.features.map(d => d.properties.total / d.properties.pop * 1000))
-            const maxConversions = max(data.features.map(d => d.properties.total_c / d.properties.pop * 1000))
 
-            console.log(data.features.map(d => d))
-            colorScaleMariage = scaleSequential(interpolate("white", "#50c1a3")).domain([0, maxMariages])
-            colorScaleConversions = scaleSequential(interpolate("white", "#50c1a3")).domain([0, maxConversions])
-
-
+            // Map projection
             const projection = geoTransform({
                 point: function (px, py) {
                     this.stream.point(x(px), y(py));
@@ -118,19 +126,72 @@
 
             path = geoPath().projection(projection);
 
-            geodata = data.features
+
+            // Barchart data
+
+            const totalConversions = [
+                {
+                    sexe: "Femmes",
+                    value: sum(geodata.map(d => d.properties.c_f_f))
+
+                },
+                {
+                    sexe: "Hommes",
+                    value: sum(geodata.map(d => d.properties.c_h_h))
+                }
+            ];
+
+            nConversions = totalConversions.map(d => d.value).reduce((acc, currentValue) => acc + currentValue, 0);
 
 
-            initZoom();
+            const totalMariages = [
+                {
+                    sexe: "Femmes",
+                    value: sum(geodata.map(d => d.properties.f_f))
+
+                },
+                {
+                    sexe: "Hommes",
+                    value: sum(geodata.map(d => d.properties.h_h))
+                }
+            ];
+
+            nMariages = totalMariages.map(d => d.value).reduce((acc, currentValue) => acc + currentValue, 0);
+
+
+            dataAgg = [{
+                total_c: totalConversions,
+                total: totalMariages
+            }]
+
+
+            linearScale = scaleLinear().domain([0, sum(geodata.map(d => d.properties.c_h_h))]).range([heightB - padding.bottom, padding.top])
+
 
         }
     )
 
 
+    // Statistiques globales
+    $: if (dataAgg != null) {
+        data_total = dataAgg.map(d => d[selected])[0]
+    }
+    ;
+
+    let widthB = 300;
+
+    const padding = {top: 20, right: 15, bottom: 20, left: 25};
+
+    let heightB = 200 + padding.bottom + padding.top;
+
+
+    $: innerWidth = widthB - (padding.left + padding.right);
+    $: bandScale = scaleBand().domain(data_total.map(d => d.sexe)).range([padding.left, widthB - padding.right]).paddingOuter(0.5).paddingInner(0.7);
+
+
 </script>
 
 <main>
-
 
     <Grid>
 
@@ -139,7 +200,13 @@
             <Column>
 
                 <div id="map">
-                    <svg width={w} height={h}>
+                    <svg width={w} height={h+margin.top+margin.bottom} id="svg-map">
+                        <defs>
+                            <linearGradient id="MyGradient">
+                                <stop offset="0%" stop-color="white"/>
+                                <stop offset="100%" stop-color="#50c1a3"/>
+                            </linearGradient>
+                        </defs>
 
                         <!--Cantons -->
                         {#key selected}
@@ -147,7 +214,7 @@
                                 {#each geodata as border, i}
                                     <g transform="translate({margin.left + margin.right},{margin.top + margin.bottom})">
                                         <path d={path(border)}
-                                              fill="{selected == 'total' ? colorScaleMariage(border.properties[selected]/border.properties.pop*1000) : colorScaleConversions(border.properties[selected]/border.properties.pop*1000)}"
+                                              fill="{colorScale(border.properties[selected]/border.properties.pop*10000)}"
                                               on:mouseover={showTooltip(event, border.properties.canton)}
                                               on:mouseout={hideTooltip(event, border.properties.canton)}
                                               on:blur={hideTooltip(event, border.properties.canton)}
@@ -158,8 +225,25 @@
                                         ></path>
                                     </g>
                                 {/each}
+
                             </g>
                         {/key}
+
+                        <g id="legend" transform="translate({w/3},{ h - margin.top - margin.left})">
+
+                            {#if selected === "total"}
+                                <text>Nombre de mariages pour 10'000 habitants</text>
+                            {:else}
+                                <text>Nombre de conversions pour 10'000 habitants</text>
+                            {/if}
+
+                            <g transform="translate(0,15)">
+                                <rect width="300" height="20" fill="url(#MyGradient)"></rect>
+                            </g>
+
+
+                        </g>
+
 
                     </svg>
 
@@ -182,8 +266,10 @@
                 <div id="title">
                     <h2>Oui, je le veux </h2>
                     <br>
-                    <p>Le dimanche 26 septembre 2021, la Suisse a dit <strong>oui</strong> au mariage civil pour toutes et tous.
-                        Depuis juillet 2022, dans quel canton y a-t-il eu le plus de mariages du même sexe ? Et de conversions du partenariat enregistré ?
+                    <p>Le dimanche 26 septembre 2021, la Suisse a dit <strong>oui</strong> au mariage civil pour toutes
+                        et tous.
+                        Depuis juillet 2022, {nMariages} mariages de même sexe et {nConversions} conversions de
+                        partenariat enregistré ont eu lieu, mais dans quel canton y a-t-il eu le plus ?
 
                         <strong>Découvrons ensemble</strong> !</p>
                 </div>
@@ -202,9 +288,32 @@
                 </div>
 
 
+                <svg width="{widthB}" height="{heightB+padding.bottom}" id="barchart">
+                    {#key selected}
+                        {#each data_total as feature, i}
+                            <g>
+                                <rect
+                                        x="{bandScale(feature.sexe)}"
+                                        y="{linearScale(feature.value)}"
+                                        width="{bandScale.bandwidth()}"
+                                        height="{heightB - padding.bottom - linearScale(feature.value)}"
+                                        fill="#50c1a3"
+                                ></rect>
+
+                                <text class="axisLabel" x="{bandScale(feature.sexe) + bandScale.bandwidth()/2}"
+                                      y="{linearScale(feature.value-150)}" fill="white">{feature.value}</text>
+                            </g>
+
+                            <text class="axisLabel" x="{bandScale(feature.sexe) + bandScale.bandwidth()/2}"
+                                  y="{heightB}" fill="#C7287D" back>{feature.sexe}</text>
+
+                        {/each}
+                    {/key}
+                </svg>
             </Column>
         </Row>
     </Grid>
+
 
     <footer><small><code>Données: <a
             href="https://www.bfs.admin.ch/bfs/fr/home/statistiques/population/mariages-partenaires-divorces/mariages.gnpdetail.2023-0216.html">Office
@@ -213,10 +322,24 @@
 </main>
 
 <style>
+
+
+    #legend {
+        font-family: "monospace";
+        font-weight: 10;
+        color: #C7287D;
+        fill: #C7287D;
+    }
+
     #title {
         padding-top: 10vh;
     }
-    strong { font-weight: 1000; color: #50c1a3 }
+
+    strong {
+        font-weight: 1000;
+        color: #50c1a3
+    }
+
     footer {
         text-align: right;
         right: 0;
@@ -258,6 +381,9 @@
         0.12em 0.12em #fdf21f, 0.16em 0.16em #3fdf4b, 0.2em 0.2em #3462fe;
     }
 
+    .axisLabel {
+        text-anchor: middle;
+    }
 
 </style>
 

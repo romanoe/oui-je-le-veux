@@ -6,7 +6,8 @@
 
 <main>
 
-<Map></Map>
+   <Map></Map>
+
 
 </main>
 
