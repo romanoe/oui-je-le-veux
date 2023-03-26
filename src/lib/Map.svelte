@@ -4,14 +4,13 @@
     import {select, selectAll} from "d3-selection";
     import {fade} from "svelte/transition";
     import bbox from "@turf/bbox";
-    import {scaleLinear, scaleSequential, scaleBand} from "d3-scale";
+    import {scaleBand, scaleLinear, scaleSequential} from "d3-scale";
     import {max, sum} from "d3-array";
     import {interpolate} from "d3-interpolate";
-    import {Grid, Column, Row} from "carbon-components-svelte";
     import {axisBottom} from "d3-axis";
 
 
-    let geodata = [], dataAgg = null, data_total = [], projection, path, colorScaleMariage, colorScaleConversions,
+    let geodata = [], dataAgg = null, data_total = [], path,
         linearScale, nConversions, nMariages;
     let selected = 'total';
 
@@ -24,6 +23,8 @@
     const margin = {top: 50, right: 20, bottom: 0, left: 20},
         w = window.innerWidth * 0.6 - margin.left - margin.right,
         h = window.innerHeight * 0.9 - margin.top - margin.bottom;
+
+
 
 
     // Tooltip
@@ -72,7 +73,7 @@
     const setLegendAxis = (domain) => {
 
         // Axis
-        select("#legend").append('g').attr("class", "axis").attr("transform", "translate(0,35)")
+        select("#legend").append('g').attr("class", "axis").attr("transform", "translate(0,20)")
 
         // linear scale for axis
         const sequentialScale = scaleSequential()
@@ -102,17 +103,19 @@
             // https://bl.ocks.org/mbostock/6216797
             const [minX, minY, maxX, maxY] = bbox(data);
 
-            const width = w - margin.left - margin.right;
+
             // calculate aspect ratio and derive height
-            const height = ((maxY - minY) / (maxX - minX)) * width;
+            const height = ((maxY - minY) / (maxX - minX));
 
             // Scales
             const x = scaleLinear()
-                .range([0, width])
+                .range([0, 900])
                 .domain([minX, maxX]);
 
+
+
             const y = scaleLinear()
-                .range([0, height])
+                .range([0, 600])
                 .domain([maxY, minY]);
 
 
@@ -193,99 +196,31 @@
 
 <main>
 
-    <Grid>
+    <div class="row">
 
-        <Row>
+        <div id="title" class="col-4 col-s-9">
+            <h2>Oui, je le veux </h2>
+            <br>
+            <p>Le dimanche 26 septembre 2021, la Suisse a dit <strong>oui</strong> au mariage civil pour toutes
+                et tous.
+                Depuis juillet 2022, {nMariages} mariages de même sexe et {nConversions} conversions de
+                partenariat enregistré ont eu lieu, mais dans quel canton y en a-t-il eu le plus ?
 
-            <Column>
+                <strong>Découvrons ensemble</strong> !</p>
 
-                <div id="map">
-                    <svg width={w} height={h+margin.top+margin.bottom} id="svg-map">
-                        <defs>
-                            <linearGradient id="MyGradient">
-                                <stop offset="0%" stop-color="white"/>
-                                <stop offset="100%" stop-color="#50c1a3"/>
-                            </linearGradient>
-                        </defs>
+            <br>
+            <br>
 
-                        <!--Cantons -->
-                        {#key selected}
-                            <g transition:fade>
-                                {#each geodata as border, i}
-                                    <g transform="translate({margin.left + margin.right},{margin.top + margin.bottom})">
-                                        <path d={path(border)}
-                                              fill="{colorScale(border.properties[selected]/border.properties.pop*10000)}"
-                                              on:mouseover={showTooltip(event, border.properties.canton)}
-                                              on:mouseout={hideTooltip(event, border.properties.canton)}
-                                              on:blur={hideTooltip(event, border.properties.canton)}
-                                              on:focus={showTooltip(event, border.properties.canton)}
-                                              id={"path-"+border.properties.canton}
-                                              on:mouseenter={handleMouseOver(event,"path-"+border.properties.canton)}
-                                              on:mouseleave={handleMouseOut(event,"path-"+border.properties.canton)}
-                                        ></path>
-                                    </g>
-                                {/each}
+            <div id="labels">
+                <label>
+                    <input checked={selected==='total'} on:change={onChange} type="radio" name="mariage"
+                           value="total"/> Mariages
+                </label>
 
-                            </g>
-                        {/key}
-
-                        <g id="legend" transform="translate({w/3},{ h - margin.top - margin.left})">
-
-                            {#if selected === "total"}
-                                <text>Nombre de mariages pour 10'000 habitants</text>
-                            {:else}
-                                <text>Nombre de conversions pour 10'000 habitants</text>
-                            {/if}
-
-                            <g transform="translate(0,15)">
-                                <rect width="300" height="20" fill="url(#MyGradient)"></rect>
-                            </g>
-
-
-                        </g>
-
-
-                    </svg>
-
-
-                    {#each geodata as kanton, i}
-                        <div id={kanton.properties.canton}
-                             style="position: absolute; display: none; background-color: whitesmoke; opacity: 0.6; padding: 20px; border-radius: 10%;">
-                            <h5 style="color:{color}">{kanton.properties.canton}</h5>
-                            Femmes: <b>{kanton.properties.f_f}, conversion {kanton.properties.c_f_f} </b><br>
-                            Hommes: <b>{kanton.properties.h_h}, conversion {kanton.properties.c_h_h} </b><br>
-                        </div>
-
-                    {/each}
-                </div>
-
-
-            </Column>
-
-            <Column>
-                <div id="title">
-                    <h2>Oui, je le veux </h2>
-                    <br>
-                    <p>Le dimanche 26 septembre 2021, la Suisse a dit <strong>oui</strong> au mariage civil pour toutes
-                        et tous.
-                        Depuis juillet 2022, {nMariages} mariages de même sexe et {nConversions} conversions de
-                        partenariat enregistré ont eu lieu, mais dans quel canton y en a-t-il eu le plus ?
-
-                        <strong>Découvrons ensemble</strong> !</p>
-                </div>
-                <br>
-                <br>
-                <div id="labels">
-                    <label>
-                        <input checked={selected==='total'} on:change={onChange} type="radio" name="mariage"
-                               value="total"/> Mariages
-                    </label>
-
-                    <label>
-                        <input checked={selected==='total_c'} on:change={onChange} type="radio" name="mariage"
-                               value="total_c"/> Conversion partenariat enregistré
-                    </label>
-                </div>
+                <label>
+                    <input checked={selected==='total_c'} on:change={onChange} type="radio" name="mariage"
+                           value="total_c"/> Conversion partenariat enregistré
+                </label>
 
 
                 <svg width="{widthB}" height="{heightB+padding.bottom}" id="barchart">
@@ -310,10 +245,72 @@
                         {/each}
                     {/key}
                 </svg>
-            </Column>
-        </Row>
-    </Grid>
+            </div>
+        </div>
 
+        <div id="map" class="col-8 col-s-3">
+            <svg id="svg-map" preserveAspectRatio="xMinYMin meet" viewBox="0 0 960 730">
+                <defs>
+                    <linearGradient id="MyGradient">
+                        <stop offset="0%" stop-color="white"/>
+                        <stop offset="100%" stop-color="#50c1a3"/>
+                    </linearGradient>
+                </defs>
+
+                <!--Cantons -->
+                {#key selected}
+                    <g transition:fade>
+                        {#each geodata as border, i}
+                            <g transform="translate({margin.left + margin.right},{margin.top + margin.bottom})">
+                                <path d={path(border)}
+                                      fill="{colorScale(border.properties[selected]/border.properties.pop*10000)}"
+                                      on:mouseover={showTooltip(event, border.properties.canton)}
+                                      on:mouseout={hideTooltip(event, border.properties.canton)}
+                                      on:blur={hideTooltip(event, border.properties.canton)}
+                                      on:focus={showTooltip(event, border.properties.canton)}
+                                      id={"path-"+border.properties.canton}
+                                      on:mouseenter={handleMouseOver(event,"path-"+border.properties.canton)}
+                                      on:mouseleave={handleMouseOut(event,"path-"+border.properties.canton)}
+                                ></path>
+                            </g>
+                        {/each}
+
+                    </g>
+                {/key}
+
+                <g id="legend" transform="translate(550,670)">
+
+                    {#if selected === "total"}
+                        <text x="-400" y="15">Nombre de mariages pour 10'000 habitants</text>
+                    {:else}
+                        <text x="-430" y="15">Nombre de conversions pour 10'000 habitants</text>
+                    {/if}
+
+                    <g >
+                        <rect width="300" height="20" fill="url(#MyGradient)"></rect>
+                    </g>
+
+
+                </g>
+
+
+            </svg>
+
+
+            {#each geodata as kanton, i}
+                <div id={kanton.properties.canton}
+                     style="position: absolute; display: none; background-color: whitesmoke; opacity: 0.6; padding: 20px; border-radius: 10%;">
+                    <h5 style="color:{color}">{kanton.properties.canton}</h5>
+                    Femmes: <b>{kanton.properties.f_f}, conversion {kanton.properties.c_f_f} </b><br>
+                    Hommes: <b>{kanton.properties.h_h}, conversion {kanton.properties.c_h_h} </b><br>
+                </div>
+
+            {/each}
+        </div>
+
+
+
+    </div>
 
     <footer><small><code>Données: <a
             href="https://www.bfs.admin.ch/bfs/fr/home/statistiques/population/mariages-partenaires-divorces/mariages.gnpdetail.2023-0216.html">Office
@@ -322,7 +319,6 @@
 </main>
 
 <style>
-
 
     #legend {
         font-family: "monospace";
@@ -333,6 +329,7 @@
 
     #title {
         padding-top: 10vh;
+        padding-left: 3vw;
     }
 
     strong {
@@ -350,13 +347,16 @@
 
     p {
         color: #C7287D;
+        font-size: 1.2rem;
     }
 
     label {
         display: block;
-        font-size: 1vw;
+        font-size: 1.2rem;
+        min-font-size: 1vw;
         line-height: 2vw;
     }
+
 
     #labels {
         color: #C7287D;
@@ -374,7 +374,7 @@
         color: #C7287D;
         font-family: "Roboto", sans-serif;
         text-transform: uppercase;
-        font-size: 3.3vw;
+        font-size: 3.4rem;
         letter-spacing: 0.2em;
         cursor: pointer;
         text-shadow: 0.04em 0.04em #fc0049, 0.08em 0.08em #fe8f01,
