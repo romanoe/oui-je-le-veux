@@ -6,25 +6,26 @@ et tous. Mais dans quel canton y en a-t-il eu le plus depuis juillet 2022 ? [Dé
 ![oui-je-le-veux](https://user-images.githubusercontent.com/32194904/227787538-2cf309cb-ec9d-466d-b0ca-fd544fbdd6e5.gif)
 
 
-
-
 ## Données
 
 [Office fédéral de la statistique (OFS), Statistique du mouvement naturel de la population](https://www.bfs.admin.ch/bfs/fr/home/statistiques/population/mariages-partenaires-divorces/mariages.gnpdetail.2023-0216.html)
 
+## Credits
+* Rainbow text : https://foolishdeveloper.com/simple-rainbow-text-animation-using-css-free-code/
+
 ## Run
 
 ```shell
-npm run dev
+vite
 ```
 
 ## Build
 
 ```shell
-npm run build
+vite build
 ```
 
 ## Preview
 ```shell
-npm run preview
+vite preview
 ```
