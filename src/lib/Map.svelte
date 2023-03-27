@@ -223,7 +223,7 @@
                 </label>
 
 
-                <svg width="{widthB}" height="{heightB+padding.bottom}" id="barchart">
+                <svg width="{widthB}" height="{heightB+padding.bottom+padding.top}" id="barchart">
                     {#key selected}
                         {#each data_total as feature, i}
                             <g>
@@ -240,7 +240,9 @@
                             </g>
 
                             <text class="axisLabel" x="{bandScale(feature.sexe) + bandScale.bandwidth()/2}"
-                                  y="{heightB}" fill="#C7287D" back>{feature.sexe}</text>
+                                  y="{heightB}" fill="#C7287D" back>{feature.sexe}*</text>
+                            <text class="axisAnnotation" x="{widthB/2}"
+                                  y="{heightB + 30}" fill="#C7287D" back>*Toutes autres identités de genre confondues</text>
 
                         {/each}
                     {/key}
@@ -383,6 +385,11 @@
 
     .axisLabel {
         text-anchor: middle;
+    }
+
+    .axisAnnotation {
+        text-anchor: middle;
+        font-size: 0.7rem;
     }
 
 </style>
