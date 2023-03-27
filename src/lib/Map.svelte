@@ -201,8 +201,7 @@
         <div id="title" class="col-4 col-s-9">
             <h2>Oui, je le veux </h2>
             <br>
-            <p>Le dimanche 26 septembre 2021, la Suisse a dit <strong>oui</strong> au mariage civil pour toutes
-                et tous.
+            <p>Le dimanche 26 septembre 2021, la Suisse a dit <strong>oui</strong> au mariage civil pour touxtes.
                 Depuis juillet 2022, {nMariages} mariages de même sexe et {nConversions} conversions de
                 partenariat enregistré ont eu lieu, mais dans quel canton y en a-t-il eu le plus ?
 
@@ -301,8 +300,8 @@
 
             {#each geodata as kanton, i}
                 <div id={kanton.properties.canton}
-                     style="position: absolute; display: none; background-color: whitesmoke; opacity: 0.6; padding: 20px; border-radius: 10%;">
-                    <h5 style="color:{color}">{kanton.properties.canton}</h5>
+                     style="position: absolute; display: none; background-color: whitesmoke; opacity: 0.6; padding: 10px; border-radius: 5%;">
+                    <h3 style="color:{color}">{kanton.properties.canton}</h3>
                     Femmes: <b>{kanton.properties.f_f}, conversion {kanton.properties.c_f_f} </b><br>
                     Hommes: <b>{kanton.properties.h_h}, conversion {kanton.properties.c_h_h} </b><br>
                 </div>
